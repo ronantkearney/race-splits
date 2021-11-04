@@ -1,20 +1,30 @@
 package com.racesplits.android;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.SeekBar;
+import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.textfield.TextInputLayout;
 import com.racesplits.R;
 import com.racesplits.race.Race;
 import com.racesplits.racer.Racer;
 import com.racesplits.racer.RacerSplitTime;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,8 +34,11 @@ public class MainActivity extends AppCompatActivity {
     LinearLayoutManager linearLayoutManager;
     List<Model> modelList;
     Adapter adapter;
+    TextInputLayout editTextLayout;
     EditText editText;
-    Race race = new Race();
+    SeekBar seekbar;
+    TextView sliderText;
+    Race race = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,11 +50,70 @@ public class MainActivity extends AppCompatActivity {
         modelList = new ArrayList<>();
         initRecyclerView();
 
+        editTextLayout = (TextInputLayout) findViewById(R.id.textinputlayout);
         editText = (EditText) findViewById(R.id.textinput);
         editText.setTextIsSelectable(false);
         editText.setClickable(true);
         editText.setLongClickable(true);
         editText.setShowSoftInputOnFocus(false);
+
+        sliderText = (TextView) findViewById(R.id.slidertext);
+
+        seekbar = (SeekBar) findViewById(R.id.seekbar);
+        seekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if ((progress > 95) && (race==null)) {
+                    sliderText.setText("Race started. Slide back left to end");
+                    editText.setEnabled(true);
+                    editText.setFocusedByDefault(true);
+                    editText.setFocusableInTouchMode(false);
+                    editTextLayout.setVisibility(View.VISIBLE);
+                    race = new Race();
+                } else if ((progress < 5) && (race!=null)) {
+                    sliderText.setText("Race is over");
+                    editText.setEnabled(false);
+                    editTextLayout.setVisibility(View.INVISIBLE);
+                    seekBar.setEnabled(false);
+
+                    LocalDateTime now = LocalDateTime.now();
+                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu-MM-dd_HHmm");
+                    final String RESULTS_LIST_FILE_NAME = dtf.format(now)+"_Results_Log_RAW.txt";
+
+                    FileOutputStream fos = null;
+                    File externalFile = new File(getExternalFilesDir("RaceResults"), RESULTS_LIST_FILE_NAME);
+                    try {
+                        fos = new FileOutputStream(externalFile);
+                        byte[] raceLog = race.getRaceLog().getBytes(StandardCharsets.UTF_8);
+                        fos.write(raceLog);
+//                        sliderText.setText(raceLog.length+" bytes  written to dir: "+getFilesDir()+"/"+RESULTS_LIST_FILE_NAME);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (fos!=null) {
+                            try {
+                                fos.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
     }
 
     private void enableImmersiveUI() {
@@ -81,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
     private String getFormattedSplitForRacer(Racer racer) {
 
         RacerSplitTime latestSplit = racer.getLatestSplit();
-        final int splitCount = racer.getSplitCount();
         Duration durationSincePreviousSplit = latestSplit.getDurationSincePreviousSplit();
 
         long minutes = durationSincePreviousSplit.toMinutes();
@@ -106,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onKeyUp(int keyCode, KeyEvent event) {
 
         switch (keyCode) {
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
             case KeyEvent.KEYCODE_EQUALS:
                 return handleEnter();
             case KeyEvent.KEYCODE_NUMPAD_0:
