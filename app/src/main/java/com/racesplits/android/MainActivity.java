@@ -50,16 +50,16 @@ public class MainActivity extends AppCompatActivity {
         modelList = new ArrayList<>();
         initRecyclerView();
 
-        editTextLayout = (TextInputLayout) findViewById(R.id.textinputlayout);
-        editText = (EditText) findViewById(R.id.textinput);
+        editTextLayout = findViewById(R.id.textinputlayout);
+        editText = findViewById(R.id.textinput);
         editText.setTextIsSelectable(false);
         editText.setClickable(true);
         editText.setLongClickable(true);
         editText.setShowSoftInputOnFocus(false);
 
-        sliderText = (TextView) findViewById(R.id.slidertext);
+        sliderText = findViewById(R.id.slidertext);
 
-        seekbar = (SeekBar) findViewById(R.id.seekbar);
+        seekbar = findViewById(R.id.seekbar);
         seekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -71,17 +71,18 @@ public class MainActivity extends AppCompatActivity {
                     editTextLayout.setVisibility(View.VISIBLE);
                     race = new Race();
                 } else if ((progress < 5) && (race!=null)) {
-                    sliderText.setText("Race is over");
+                    sliderText.setText("The race is over");
                     editText.setEnabled(false);
                     editTextLayout.setVisibility(View.INVISIBLE);
                     seekBar.setEnabled(false);
 
-                    LocalDateTime now = LocalDateTime.now();
+                    LocalDateTime filenameDateTime = LocalDateTime.now();
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu-MM-dd_HHmm");
-                    final String RESULTS_LIST_FILE_NAME = dtf.format(now)+"_Results_Log_RAW.txt";
+                    final String RESULTS_LIST_FILE_NAME = dtf.format(filenameDateTime)+"_Results_Log_RAW.csv";
+                    final String RESULTS_LIST_FILE_DIR = "RaceResults";
 
                     FileOutputStream fos = null;
-                    File externalFile = new File(getExternalFilesDir("RaceResults"), RESULTS_LIST_FILE_NAME);
+                    File externalFile = new File(getExternalFilesDir(RESULTS_LIST_FILE_DIR), RESULTS_LIST_FILE_NAME);
                     try {
                         fos = new FileOutputStream(externalFile);
                         byte[] raceLog = race.getRaceLog().getBytes(StandardCharsets.UTF_8);
@@ -95,6 +96,30 @@ public class MainActivity extends AppCompatActivity {
                         if (fos!=null) {
                             try {
                                 fos.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    final String RESULTS_LAPS_FILE_NAME = dtf.format(filenameDateTime)+"_Results_Laps_RAW.csv";
+                    final String RESULTS_LAPS_FILE_DIR = "RaceResults";
+
+                    FileOutputStream fos2 = null;
+                    File externalFile2 = new File(getExternalFilesDir(RESULTS_LAPS_FILE_DIR), RESULTS_LAPS_FILE_NAME);
+                    try {
+                        fos2 = new FileOutputStream(externalFile2);
+                        byte[] sortedResults = race.getSortedResults().getBytes(StandardCharsets.UTF_8);
+                        fos2.write(sortedResults);
+//                        sliderText.setText(raceLog.length+" bytes  written to dir: "+getFilesDir()+"/"+RESULTS_LIST_FILE_NAME);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (fos2!=null) {
+                            try {
+                                fos2.close();
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }

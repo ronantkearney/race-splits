@@ -9,6 +9,7 @@ public class Racer {
     private String bib;
     private String name;
     private ArrayList<RacerSplitTime> splitTimes;
+    private Duration differenceFromWinningTime;
 
     public Racer(String bib) {
         this.bib = bib;
@@ -29,6 +30,10 @@ public class Racer {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public ArrayList<RacerSplitTime> getSplitTimes() {
+        return splitTimes;
     }
 
     public int getSplitCount() {
