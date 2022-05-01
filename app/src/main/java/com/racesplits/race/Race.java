@@ -3,6 +3,9 @@ package com.racesplits.race;
 import com.racesplits.racer.Racer;
 import com.racesplits.racer.RacerSplitTime;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -29,11 +32,13 @@ public class Race {
 
     private Instant raceStart;
     private Map<String, Racer> racers;
+    private Map<String, String> racerNames;
     private ArrayList<RaceLogEntry> raceLog;
 
     public Race() {
         raceStart = Instant.now();
         racers = new HashMap();
+        racerNames = new HashMap();
         raceLog = new ArrayList<>();
     }
 
@@ -54,8 +59,23 @@ public class Race {
             return racers.get(racerNumber);
         } else {
             Racer racer = new Racer(racerNumber);
+            racer.setName(racerNames.get(racerNumber));
             racers.put(racerNumber, racer);
             return racer;
+        }
+    }
+
+    public void putRacerName(String racerNumber, String racerName) {
+        if (!racerNames.containsKey(racerNumber)) {
+            racerNames.put(racerNumber, racerName);
+        }
+    }
+
+    public String getRacerName(String racerNumber) {
+        if (racerNames.containsKey(racerNumber)) {
+            return racerNames.get(racerNumber);
+        } else {
+            return "Unknown";
         }
     }
 

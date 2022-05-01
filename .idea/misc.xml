@@ -3,8 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/HP/AndroidStudioProjects/RaceSplitsApp/app/src/main/res/drawable/thumb.xml" value="0.37864583333333335" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/RaceSplitsApp/app/src/main/res/layout/activity_main.xml" value="0.2957427536231884" />
-        <entry key="..\:/Users/HP/AndroidStudioProjects/RaceSplitsApp/app/src/main/res/layout/card_item.xml" value="0.20520833333333333" />
+        <entry key="..\:/Users/HP/AndroidStudioProjects/RaceSplitsApp/app/src/main/res/layout/card_item.xml" value="0.5" />
       </map>
     </option>
   </component>

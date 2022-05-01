@@ -17,10 +17,13 @@ import com.racesplits.race.Race;
 import com.racesplits.racer.Racer;
 import com.racesplits.racer.RacerSplitTime;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -70,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
                     editText.setFocusableInTouchMode(false);
                     editTextLayout.setVisibility(View.VISIBLE);
                     race = new Race();
+                    readRacerFile();
                 } else if ((progress < 5) && (race!=null)) {
                     sliderText.setText("The race is over");
                     editText.setEnabled(false);
@@ -141,6 +145,40 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void readRacerFile() {
+
+        final String RACER_FILENAME = "RacerMaster.csv";
+        final String RACER_FILENAME_DIR = "RaceResults";
+
+        FileInputStream fis = null;
+        File racerFile = new File(getExternalFilesDir(RACER_FILENAME_DIR), RACER_FILENAME);
+
+        try {
+            fis = new FileInputStream(racerFile);
+            InputStreamReader isr = new InputStreamReader(fis);
+            BufferedReader br = new BufferedReader(isr);
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] tokens = line.split(",");
+                String bib = tokens[2].trim();
+                race.putRacerName(bib, tokens[0]+" "+tokens[1]);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (fis!=null) {
+                    fis.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void enableImmersiveUI() {
         // Enables regular immersive mode.
         // For "lean back" mode, remove SYSTEM_UI_FLAG_IMMERSIVE.
@@ -168,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
             Racer racer = race.getRacer(bibNum);
             String formattedSplitTime = getFormattedSplitForRacer(racer);
 
-            modelList.add(new Model(R.drawable.ic_time, bibNum, "Split #"+racer.getSplitCount(), formattedSplitTime));
+            modelList.add(new Model(R.drawable.ic_time, bibNum, racer.getName(), "Split #"+racer.getSplitCount(), formattedSplitTime));
             adapter.notifyItemInserted(modelList.size()-1);
         }
         recyclerView.scrollToPosition(modelList.size()-1);

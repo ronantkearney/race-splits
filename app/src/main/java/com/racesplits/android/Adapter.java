@@ -33,8 +33,9 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         String textView1 = modelList.get(position).getTextView1();
         String textView2 = modelList.get(position).getTextView2();
         String textView3 = modelList.get(position).getTextView3();
+        String textView4 = modelList.get(position).getTextView4();
 
-        holder.setData(imageView1, textView1, textView2, textView3);
+        holder.setData(imageView1, textView1, textView2, textView3, textView4);
     }
 
     @Override
@@ -48,6 +49,7 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
         private TextView holderTextView1;
         private TextView holderTextView2;
         private TextView holderTextView3;
+        private TextView holderTextView4;
 
 
         public ViewHolder(@NonNull View itemView) {
@@ -57,13 +59,15 @@ public class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder> {
             holderTextView1 = itemView.findViewById(R.id.textview1);
             holderTextView2 = itemView.findViewById(R.id.textview2);
             holderTextView3 = itemView.findViewById(R.id.textview3);
+            holderTextView4 = itemView.findViewById(R.id.textview4);
         }
 
-        public void setData(int imageView1, String textView1, String textView2, String textView3) {
+        public void setData(int imageView1, String textView1, String textView2, String textView3, String textView4) {
             holderImageView.setImageResource(imageView1);
             holderTextView1.setText(textView1);
             holderTextView2.setText(textView2);
             holderTextView3.setText(textView3);
+            holderTextView4.setText(textView4);
         }
     }
 }

@@ -30,18 +30,30 @@
                 android:layout_marginEnd="4dp"
                 android:src="@drawable/ic_time" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toRightOf="@id/imageview"
+                    android:orientation="vertical"
+                    android:layout_weight="1">
+
                 <TextView
                     android:id="@+id/textview1"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_marginBottom="4dp"
-                    android:layout_toRightOf="@id/imageview"
                     android:text="Racer"
                     android:textColor="@color/black"
-                    android:textSize="22sp" />
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/textview2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Name"
+                    android:textColor="@color/black"
+                    android:textSize="10sp" />
+
+                </LinearLayout>
 
             </RelativeLayout>
 
@@ -52,7 +64,7 @@
             android:layout_weight="1">
 
             <TextView
-                android:id="@+id/textview2"
+                android:id="@+id/textview3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="2dp"
@@ -62,7 +74,7 @@
                 android:textSize="12sp"/>
 
             <TextView
-                android:id="@+id/textview3"
+                android:id="@+id/textview4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="2dp"
