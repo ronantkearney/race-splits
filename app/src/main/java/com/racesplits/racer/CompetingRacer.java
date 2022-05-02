@@ -3,40 +3,23 @@ package com.racesplits.racer;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 
-public class Racer {
+public class CompetingRacer {
 
-    private String bib;
-    private String name;
-    private ArrayList<RacerSplitTime> splitTimes;
-    private Duration differenceFromWinningTime;
+    private RacerDetails racerDetails;
+    private List<RacerSplitTime> splitTimes;
 
-    public Racer(String bib) {
-        this.bib = bib;
+    public CompetingRacer(RacerDetails racer) {
+        this.racerDetails = racer;
         splitTimes = new ArrayList();
     }
 
-    public String getBib() {
-        return bib;
-    }
-
-    public void setBib(String bib) {
-        this.bib = bib;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public ArrayList<RacerSplitTime> getSplitTimes() {
+    public List<RacerSplitTime> getSplitTimes() {
         return splitTimes;
     }
 
-    public int getSplitCount() {
+    public int numberOfSplitsForRacer() {
         return splitTimes.size();
     }
 
@@ -51,17 +34,14 @@ public class Racer {
     }
 
     public RacerSplitTime getLatestSplit() {
-        int splitCount = getSplitCount();
-        if (splitCount == 0) {
-            return null;
-        } else {
-            return splitTimes.get(splitCount - 1);
-        }
+        return numberOfSplitsForRacer() > 0
+                ? splitTimes.get(numberOfSplitsForRacer() - 1)
+                : null;
     }
 
     private Instant getPreviousSplit(Instant raceStart) {
 
-        int splitCount = getSplitCount();
+        int splitCount = numberOfSplitsForRacer();
         if (splitCount == 0) {
             return raceStart;
         } else {
@@ -70,5 +50,11 @@ public class Racer {
         }
     }
 
+    public RacerDetails getRacerDetails() {
+        return racerDetails;
+    }
 
+    public void setRacerDetails(RacerDetails racerDetails) {
+        this.racerDetails = racerDetails;
+    }
 }

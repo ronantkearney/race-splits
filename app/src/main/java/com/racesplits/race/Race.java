@@ -1,18 +1,20 @@
 package com.racesplits.race;
 
-import com.racesplits.racer.Racer;
+import com.racesplits.racer.CompetingRacer;
+import com.racesplits.racer.RacerDetails;
 import com.racesplits.racer.RacerSplitTime;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -31,51 +33,53 @@ public class Race {
     private static int SECONDS_IN_A_MINUTE = 60;
 
     private Instant raceStart;
-    private Map<String, Racer> racers;
-    private Map<String, String> racerNames;
+    private Map<String, CompetingRacer> competingRacers;
+    private Map<String, RacerDetails> registeredRacers;
     private ArrayList<RaceLogEntry> raceLog;
 
     public Race() {
         raceStart = Instant.now();
-        racers = new HashMap();
-        racerNames = new HashMap();
+        competingRacers = new HashMap();
+        registeredRacers = new HashMap();
         raceLog = new ArrayList<>();
     }
 
     public void addTimeEntryForRacer(String racerNumber) {
         Instant raceTimeEntry = Instant.now();
 
-        Racer racer = getRacer(racerNumber);
+        CompetingRacer racer = getRacer(racerNumber);
         racer.addSplitTime(raceStart, raceTimeEntry);
 
         DateTimeFormatter timeOfDayFormat = DateTimeFormatter.ofPattern(TIME_OF_DAY_FORMAT).withZone(ZoneId.systemDefault());
         Duration splitTime = racer.getLatestSplit().getDurationSincePreviousSplit();
         String splitTimeFormatted = String.format(SPLIT_TIME_FORMAT, splitTime.toMinutes(), splitTime.getSeconds() % SECONDS_IN_A_MINUTE);
-        raceLog.add(new RaceLogEntry(racerNumber, timeOfDayFormat.format(raceTimeEntry), splitTimeFormatted, String.valueOf(racer.getSplitCount()), racer.getName()));
+        raceLog.add(new RaceLogEntry(racerNumber, timeOfDayFormat.format(raceTimeEntry), splitTimeFormatted, String.valueOf(racer.numberOfSplitsForRacer()),
+                racer.getRacerDetails().getFirstName() + " " + racer.getRacerDetails().getLastName()));
     }
 
-    public Racer getRacer(String racerNumber) {
-        if (racers.containsKey(racerNumber)) {
-            return racers.get(racerNumber);
+    public CompetingRacer getRacer(String racerNumber) {
+        if (competingRacers.containsKey(racerNumber)) {
+            return competingRacers.get(racerNumber);
         } else {
-            Racer racer = new Racer(racerNumber);
-            racer.setName(racerNames.get(racerNumber));
-            racers.put(racerNumber, racer);
-            return racer;
+            if (registeredRacers.containsKey(racerNumber)) {
+                RacerDetails racerDetails = registeredRacers.get(racerNumber);
+                CompetingRacer competingRacer = new CompetingRacer(racerDetails);
+                competingRacers.put(racerNumber, competingRacer);
+                return competingRacer;
+            } else {
+                RacerDetails unknownRacer = new RacerDetails(racerNumber,
+                        "unknown", "unknown", "unknown", false);
+                CompetingRacer competingRacer = new CompetingRacer(unknownRacer);
+                competingRacers.put(racerNumber, competingRacer);
+                return competingRacer;
+            }
         }
     }
 
-    public void putRacerName(String racerNumber, String racerName) {
-        if (!racerNames.containsKey(racerNumber)) {
-            racerNames.put(racerNumber, racerName);
-        }
-    }
-
-    public String getRacerName(String racerNumber) {
-        if (racerNames.containsKey(racerNumber)) {
-            return racerNames.get(racerNumber);
-        } else {
-            return "Unknown";
+    public void addRegisteredRacer(String racerNumber, String firstName, String lastName, String club, boolean isJunior) {
+        if (!registeredRacers.containsKey(racerNumber)) {
+            RacerDetails racerDetails = new RacerDetails(racerNumber, firstName, lastName, club, isJunior);
+            registeredRacers.put(racerNumber, racerDetails);
         }
     }
 
@@ -97,19 +101,85 @@ public class Race {
         return sb.toString();
     }
 
-    public String getSortedResults() {
+    public List<CompetingRacer> getSortedResults() {
         int raceNumberOfLaps = getNumberOfLaps();
         Instant winningTime = getWinningTime(raceNumberOfLaps);
 
-        Stream<Racer> finshers = racers.values().stream()
+        Stream<CompetingRacer> finishers = competingRacers.values().stream()
+                .filter(racer -> racer.numberOfSplitsForRacer() >= raceNumberOfLaps)
                 .filter(racer -> !racer.getLatestSplit().getSplitTime().isBefore(winningTime))
                 .sorted(Comparator.comparing(r -> r.getLatestSplit().getSplitTime()));
 
-        Stream<Racer> nonFinishers = racers.values().stream()
+        Stream<CompetingRacer> nonFinishers = competingRacers.values().stream()
+                .filter(racer -> racer.numberOfSplitsForRacer() < raceNumberOfLaps)
                 .filter(racer -> racer.getLatestSplit().getSplitTime().isBefore(winningTime))
                 .sorted(Comparator.comparing(r -> r.getLatestSplit().getSplitTime()));
 
-        List<Racer> sortedResults = Stream.concat(finshers, nonFinishers).collect(Collectors.toList());
+        return Stream.concat(finishers, nonFinishers).collect(Collectors.toList());
+    }
+
+    public Workbook formatResultsAsXls(List<CompetingRacer> sortedRacerResultList) {
+
+        int raceNumberOfLaps = getNumberOfLaps();
+        Instant winningTime = getWinningTime(raceNumberOfLaps);
+
+        Workbook wb = new XSSFWorkbook();
+
+        CreationHelper createHelper = wb.getCreationHelper();
+        Sheet sheet = wb.createSheet("Sheet1");
+
+        Row headerRow = sheet.createRow(0);
+        headerRow.createCell(0).setCellValue(createHelper.createRichTextString("Position"));
+        headerRow.createCell(1).setCellValue(createHelper.createRichTextString("Diff"));
+        headerRow.createCell(2).setCellValue(createHelper.createRichTextString("Bib"));
+        headerRow.createCell(3).setCellValue(createHelper.createRichTextString("Name"));
+        headerRow.createCell(4).setCellValue(createHelper.createRichTextString("Club"));
+        for (int i=1; i<=raceNumberOfLaps; i++) {
+            headerRow.createCell(4+i).setCellValue(createHelper.createRichTextString("Split "+i));
+        }
+
+        int position=1;
+        for (CompetingRacer racer : sortedRacerResultList) {
+
+            Row resultRow = sheet.createRow(position);
+            resultRow.createCell(0).setCellValue(String.valueOf(position));
+
+            Instant racerLastSplit = racer.getLatestSplit().getSplitTime();
+            if (racerLastSplit.isBefore(winningTime)) {
+                if (racer.getRacerDetails().isJunior()) {
+                    resultRow.createCell(1).setCellValue(createHelper.createRichTextString("JUNIOR"));
+                } else {
+                    resultRow.createCell(1).setCellValue(createHelper.createRichTextString("DNF"));
+                }
+            } else {
+                Duration winnerDiff = Duration.between(winningTime, racerLastSplit);
+                String winnerDiffFormatted = String.format(SPLIT_TIME_FORMAT, winnerDiff.toMinutes(),
+                        winnerDiff.getSeconds() % SECONDS_IN_A_MINUTE);
+                resultRow.createCell(1).setCellValue(createHelper.createRichTextString(winnerDiffFormatted));
+            }
+
+            resultRow.createCell(2).setCellValue(createHelper.createRichTextString(racer.getRacerDetails().getBib()));
+            resultRow.createCell(3).setCellValue(createHelper.createRichTextString(
+                    racer.getRacerDetails().getFirstName() + " " + racer.getRacerDetails().getLastName()));
+            resultRow.createCell(4).setCellValue(createHelper.createRichTextString(racer.getRacerDetails().getClub()));
+
+            List<RacerSplitTime> splitTimes = racer.getSplitTimes();
+            for (int i=0;i<splitTimes.size();i++) {
+                Duration durationSincePreviousSplit = splitTimes.get(i).getDurationSincePreviousSplit();
+                String splitTimeFormatted = String.format(SPLIT_TIME_FORMAT, durationSincePreviousSplit.toMinutes(),
+                        durationSincePreviousSplit.getSeconds() % SECONDS_IN_A_MINUTE);
+                resultRow.createCell(5+i).setCellValue(createHelper.createRichTextString(splitTimeFormatted));
+            }
+            position++;
+        }
+
+        return wb;
+    }
+
+    public String formatResultsAsString(List<CompetingRacer> sortedRacerResultList) {
+
+        int raceNumberOfLaps = getNumberOfLaps();
+        Instant winningTime = getWinningTime(raceNumberOfLaps);
 
         StringBuffer sb = new StringBuffer();
         sb.append("Position").append(COMMA);
@@ -126,11 +196,11 @@ public class Race {
         }
 
         int position=1;
-        for (Racer racer : sortedResults) {
+        for (CompetingRacer racer : sortedRacerResultList) {
             sb.append(position).append(COMMA);
             position++;
-            sb.append(racer.getBib()).append(COMMA);
-            sb.append(racer.getName()).append(COMMA);
+            sb.append(racer.getRacerDetails().getBib()).append(COMMA);
+            sb.append(racer.getRacerDetails().getFirstName() + " " + racer.getRacerDetails().getLastName()).append(COMMA);
 
             Instant racerLastSplit = racer.getLatestSplit().getSplitTime();
             if (racerLastSplit.isBefore(winningTime)) {
@@ -143,7 +213,7 @@ public class Race {
             }
             sb.append(COMMA);
 
-            ArrayList<RacerSplitTime> splitTimes = racer.getSplitTimes();
+            List<RacerSplitTime> splitTimes = racer.getSplitTimes();
             for (int i=0;i<splitTimes.size();i++) {
                 Duration durationSincePreviousSplit = splitTimes.get(i).getDurationSincePreviousSplit();
                 String splitTimeFormatted = String.format(SPLIT_TIME_FORMAT, durationSincePreviousSplit.toMinutes(),
@@ -159,17 +229,17 @@ public class Race {
     }
 
     public int getNumberOfLaps() {
-        Map<Integer, Long> splitFrequncy = racers.values().stream()
-                .mapToInt(Racer::getSplitCount).boxed()
+        Map<Integer, Long> splitFrequncy = competingRacers.values().stream()
+                .mapToInt(CompetingRacer::numberOfSplitsForRacer).boxed()
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
         return Collections.max(splitFrequncy.entrySet(), Map.Entry.comparingByValue()).getKey().intValue();
     }
 
     public Instant getWinningTime(int raceNumberOfLaps) {
-        List<Instant> finishersLastSpilts = racers.values().stream()
-                .filter(racer -> racer.getSplitCount() == raceNumberOfLaps)
-                .map(Racer::getLatestSplit)
+        List<Instant> finishersLastSpilts = competingRacers.values().stream()
+                .filter(racer -> racer.numberOfSplitsForRacer() == raceNumberOfLaps)
+                .map(CompetingRacer::getLatestSplit)
                 .map(RacerSplitTime::getSplitTime)
                 .collect(Collectors.toList());
 

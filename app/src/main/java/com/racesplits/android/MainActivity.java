@@ -14,21 +14,25 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.racesplits.R;
 import com.racesplits.race.Race;
-import com.racesplits.racer.Racer;
+import com.racesplits.racer.CompetingRacer;
 import com.racesplits.racer.RacerSplitTime;
 
-import java.io.BufferedReader;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -73,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                     editText.setFocusableInTouchMode(false);
                     editTextLayout.setVisibility(View.VISIBLE);
                     race = new Race();
-                    readRacerFile();
+//                    readRacerFile();
                 } else if ((progress < 5) && (race!=null)) {
                     sliderText.setText("The race is over");
                     editText.setEnabled(false);
@@ -82,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
                     LocalDateTime filenameDateTime = LocalDateTime.now();
                     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("uuuu-MM-dd_HHmm");
-                    final String RESULTS_LIST_FILE_NAME = dtf.format(filenameDateTime)+"_Results_Log_RAW.csv";
+                    final String RESULTS_LIST_FILE_NAME = dtf.format(filenameDateTime)+"_LOG.csv";
                     final String RESULTS_LIST_FILE_DIR = "RaceResults";
 
                     FileOutputStream fos = null;
@@ -106,15 +110,17 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    final String RESULTS_LAPS_FILE_NAME = dtf.format(filenameDateTime)+"_Results_Laps_RAW.csv";
+                    final String RESULTS_LAPS_FILE_NAME = dtf.format(filenameDateTime)+"_RESULT_Provisional.xls";
                     final String RESULTS_LAPS_FILE_DIR = "RaceResults";
 
                     FileOutputStream fos2 = null;
                     File externalFile2 = new File(getExternalFilesDir(RESULTS_LAPS_FILE_DIR), RESULTS_LAPS_FILE_NAME);
                     try {
                         fos2 = new FileOutputStream(externalFile2);
-                        byte[] sortedResults = race.getSortedResults().getBytes(StandardCharsets.UTF_8);
-                        fos2.write(sortedResults);
+                        List<CompetingRacer> sortedRaceResultList = race.getSortedResults();
+                        race.formatResultsAsXls(sortedRaceResultList).write(fos2);
+//                        String formattedResults = race.formatResultsAsString(sortedRaceResultList);
+//                        fos2.write(formattedResults.getBytes(StandardCharsets.UTF_8));
 //                        sliderText.setText(raceLog.length+" bytes  written to dir: "+getFilesDir()+"/"+RESULTS_LIST_FILE_NAME);
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
@@ -147,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void readRacerFile() {
 
-        final String RACER_FILENAME = "RacerMaster.csv";
+        final String RACER_FILENAME = "RaceNumbers.xls";
         final String RACER_FILENAME_DIR = "RaceResults";
 
         FileInputStream fis = null;
@@ -155,14 +161,38 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             fis = new FileInputStream(racerFile);
-            InputStreamReader isr = new InputStreamReader(fis);
-            BufferedReader br = new BufferedReader(isr);
 
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] tokens = line.split(",");
-                String bib = tokens[2].trim();
-                race.putRacerName(bib, tokens[0]+" "+tokens[1]);
+            //Create Workbook instance holding reference to .xlsx file
+            XSSFWorkbook workbook = new XSSFWorkbook(fis);
+
+            //Get first/desired sheet from the workbook
+            XSSFSheet sheet = workbook.getSheetAt(0);
+
+            //Iterate through each rows one by one
+            Iterator<Row> rowIterator = sheet.iterator();
+            rowIterator.next();
+            while (rowIterator.hasNext())
+            {
+                Row row = rowIterator.next();
+                //For each row, iterate through all the columns
+                Iterator<Cell> cellIterator = row.cellIterator();
+
+                Cell firstNameCell = cellIterator.next();
+                String firstName = firstNameCell.getStringCellValue();
+
+                Cell lastNameCell = cellIterator.next();
+                String lastName = lastNameCell.getStringCellValue();
+
+                Cell clubCell = cellIterator.next();
+                String club = clubCell.getStringCellValue();
+
+                Cell juniorCell = cellIterator.next();
+                boolean isJunior = "Y".equals(juniorCell.getStringCellValue());
+
+                Cell bibCell = cellIterator.next();
+                String bib = bibCell.getStringCellValue();
+
+                race.addRegisteredRacer(bib, firstName, lastName, club, isJunior);
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -203,17 +233,19 @@ public class MainActivity extends AppCompatActivity {
 
         if (!bibNum.equals("") && !bibNum.equals("0")) {
             race.addTimeEntryForRacer(bibNum);
-            Racer racer = race.getRacer(bibNum);
+            CompetingRacer racer = race.getRacer(bibNum);
             String formattedSplitTime = getFormattedSplitForRacer(racer);
 
-            modelList.add(new Model(R.drawable.ic_time, bibNum, racer.getName(), "Split #"+racer.getSplitCount(), formattedSplitTime));
+            modelList.add(new Model(R.drawable.ic_time, bibNum,
+                    racer.getRacerDetails().getFirstName()+" "+racer.getRacerDetails().getLastName(),
+                    "Split #"+racer.numberOfSplitsForRacer(), formattedSplitTime));
             adapter.notifyItemInserted(modelList.size()-1);
         }
         recyclerView.scrollToPosition(modelList.size()-1);
         return true;
     }
 
-    private String getFormattedSplitForRacer(Racer racer) {
+    private String getFormattedSplitForRacer(CompetingRacer racer) {
 
         RacerSplitTime latestSplit = racer.getLatestSplit();
         Duration durationSincePreviousSplit = latestSplit.getDurationSincePreviousSplit();
