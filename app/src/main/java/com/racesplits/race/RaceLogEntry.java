@@ -1,7 +1,5 @@
 package com.racesplits.race;
 
-import java.time.Instant;
-
 public class RaceLogEntry {
 
     private String bib;

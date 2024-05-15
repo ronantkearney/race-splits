@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
 
-                    final String RESULTS_LAPS_FILE_NAME = dtf.format(filenameDateTime)+"_RESULT_Provisional.xls";
+                    final String RESULTS_LAPS_FILE_NAME = dtf.format(filenameDateTime)+"_RESULT_Provisional.csv";
                     final String RESULTS_LAPS_FILE_DIR = "RaceResults";
 
                     FileOutputStream fos2 = null;
@@ -118,10 +118,9 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         fos2 = new FileOutputStream(externalFile2);
                         List<CompetingRacer> sortedRaceResultList = race.getSortedResults();
-                        race.formatResultsAsXls(sortedRaceResultList).write(fos2);
-//                        String formattedResults = race.formatResultsAsString(sortedRaceResultList);
-//                        fos2.write(formattedResults.getBytes(StandardCharsets.UTF_8));
-//                        sliderText.setText(raceLog.length+" bytes  written to dir: "+getFilesDir()+"/"+RESULTS_LIST_FILE_NAME);
+//                        race.formatResultsAsXls(sortedRaceResultList).write(fos2);
+                        String formattedResults = race.formatResultsAsString(sortedRaceResultList);
+                        fos2.write(formattedResults.getBytes(StandardCharsets.UTF_8));
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     } catch (IOException e) {
@@ -149,64 +148,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-    }
-
-    private void readRacerFile() {
-
-        final String RACER_FILENAME = "RaceNumbers.xls";
-        final String RACER_FILENAME_DIR = "RaceResults";
-
-        FileInputStream fis = null;
-        File racerFile = new File(getExternalFilesDir(RACER_FILENAME_DIR), RACER_FILENAME);
-
-        try {
-            fis = new FileInputStream(racerFile);
-
-            //Create Workbook instance holding reference to .xlsx file
-            XSSFWorkbook workbook = new XSSFWorkbook(fis);
-
-            //Get first/desired sheet from the workbook
-            XSSFSheet sheet = workbook.getSheetAt(0);
-
-            //Iterate through each rows one by one
-            Iterator<Row> rowIterator = sheet.iterator();
-            rowIterator.next();
-            while (rowIterator.hasNext())
-            {
-                Row row = rowIterator.next();
-                //For each row, iterate through all the columns
-                Iterator<Cell> cellIterator = row.cellIterator();
-
-                Cell firstNameCell = cellIterator.next();
-                String firstName = firstNameCell.getStringCellValue();
-
-                Cell lastNameCell = cellIterator.next();
-                String lastName = lastNameCell.getStringCellValue();
-
-                Cell clubCell = cellIterator.next();
-                String club = clubCell.getStringCellValue();
-
-                Cell juniorCell = cellIterator.next();
-                boolean isJunior = "Y".equals(juniorCell.getStringCellValue());
-
-                Cell bibCell = cellIterator.next();
-                String bib = bibCell.getStringCellValue();
-
-                race.addRegisteredRacer(bib, firstName, lastName, club, isJunior);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fis!=null) {
-                    fis.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     private void enableImmersiveUI() {

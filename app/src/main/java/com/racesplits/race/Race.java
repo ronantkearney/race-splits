@@ -4,12 +4,6 @@ import com.racesplits.racer.CompetingRacer;
 import com.racesplits.racer.RacerDetails;
 import com.racesplits.racer.RacerSplitTime;
 
-import org.apache.poi.ss.usermodel.CreationHelper;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -68,7 +62,7 @@ public class Race {
                 return competingRacer;
             } else {
                 RacerDetails unknownRacer = new RacerDetails(racerNumber,
-                        "unknown", "unknown", "unknown", false);
+                        "unknown", "unknown", "unknown");
                 CompetingRacer competingRacer = new CompetingRacer(unknownRacer);
                 competingRacers.put(racerNumber, competingRacer);
                 return competingRacer;
@@ -76,9 +70,9 @@ public class Race {
         }
     }
 
-    public void addRegisteredRacer(String racerNumber, String firstName, String lastName, String club, boolean isJunior) {
+    public void addRegisteredRacer(String racerNumber, String firstName, String lastName, String club) {
         if (!registeredRacers.containsKey(racerNumber)) {
-            RacerDetails racerDetails = new RacerDetails(racerNumber, firstName, lastName, club, isJunior);
+            RacerDetails racerDetails = new RacerDetails(racerNumber, firstName, lastName, club);
             registeredRacers.put(racerNumber, racerDetails);
         }
     }
@@ -118,64 +112,6 @@ public class Race {
         return Stream.concat(finishers, nonFinishers).collect(Collectors.toList());
     }
 
-    public Workbook formatResultsAsXls(List<CompetingRacer> sortedRacerResultList) {
-
-        int raceNumberOfLaps = getNumberOfLaps();
-        Instant winningTime = getWinningTime(raceNumberOfLaps);
-
-        Workbook wb = new XSSFWorkbook();
-
-        CreationHelper createHelper = wb.getCreationHelper();
-        Sheet sheet = wb.createSheet("Sheet1");
-
-        Row headerRow = sheet.createRow(0);
-        headerRow.createCell(0).setCellValue(createHelper.createRichTextString("Position"));
-        headerRow.createCell(1).setCellValue(createHelper.createRichTextString("Diff"));
-        headerRow.createCell(2).setCellValue(createHelper.createRichTextString("Bib"));
-        headerRow.createCell(3).setCellValue(createHelper.createRichTextString("Name"));
-        headerRow.createCell(4).setCellValue(createHelper.createRichTextString("Club"));
-        for (int i=1; i<=raceNumberOfLaps; i++) {
-            headerRow.createCell(4+i).setCellValue(createHelper.createRichTextString("Split "+i));
-        }
-
-        int position=1;
-        for (CompetingRacer racer : sortedRacerResultList) {
-
-            Row resultRow = sheet.createRow(position);
-            resultRow.createCell(0).setCellValue(String.valueOf(position));
-
-            Instant racerLastSplit = racer.getLatestSplit().getSplitTime();
-            if (racerLastSplit.isBefore(winningTime)) {
-                if (racer.getRacerDetails().isJunior()) {
-                    resultRow.createCell(1).setCellValue(createHelper.createRichTextString("JUNIOR"));
-                } else {
-                    resultRow.createCell(1).setCellValue(createHelper.createRichTextString("DNF"));
-                }
-            } else {
-                Duration winnerDiff = Duration.between(winningTime, racerLastSplit);
-                String winnerDiffFormatted = String.format(SPLIT_TIME_FORMAT, winnerDiff.toMinutes(),
-                        winnerDiff.getSeconds() % SECONDS_IN_A_MINUTE);
-                resultRow.createCell(1).setCellValue(createHelper.createRichTextString(winnerDiffFormatted));
-            }
-
-            resultRow.createCell(2).setCellValue(createHelper.createRichTextString(racer.getRacerDetails().getBib()));
-            resultRow.createCell(3).setCellValue(createHelper.createRichTextString(
-                    racer.getRacerDetails().getFirstName() + " " + racer.getRacerDetails().getLastName()));
-            resultRow.createCell(4).setCellValue(createHelper.createRichTextString(racer.getRacerDetails().getClub()));
-
-            List<RacerSplitTime> splitTimes = racer.getSplitTimes();
-            for (int i=0;i<splitTimes.size();i++) {
-                Duration durationSincePreviousSplit = splitTimes.get(i).getDurationSincePreviousSplit();
-                String splitTimeFormatted = String.format(SPLIT_TIME_FORMAT, durationSincePreviousSplit.toMinutes(),
-                        durationSincePreviousSplit.getSeconds() % SECONDS_IN_A_MINUTE);
-                resultRow.createCell(5+i).setCellValue(createHelper.createRichTextString(splitTimeFormatted));
-            }
-            position++;
-        }
-
-        return wb;
-    }
-
     public String formatResultsAsString(List<CompetingRacer> sortedRacerResultList) {
 
         int raceNumberOfLaps = getNumberOfLaps();
@@ -183,7 +119,7 @@ public class Race {
 
         StringBuffer sb = new StringBuffer();
         sb.append("Position").append(COMMA);
-        sb.append("Racer Number").append(COMMA);
+        sb.append("Bib").append(COMMA);
         sb.append("Name").append(COMMA);
         sb.append("Winner Diff").append(COMMA);
         for (int i=1; i<=raceNumberOfLaps; i++) {
@@ -201,10 +137,11 @@ public class Race {
             position++;
             sb.append(racer.getRacerDetails().getBib()).append(COMMA);
             sb.append(racer.getRacerDetails().getFirstName() + " " + racer.getRacerDetails().getLastName()).append(COMMA);
+            sb.append(racer.getRacerDetails().getClub()).append(COMMA);
 
             Instant racerLastSplit = racer.getLatestSplit().getSplitTime();
             if (racerLastSplit.isBefore(winningTime)) {
-                sb.append("DNF");
+                sb.append("+LAP");
             } else {
                 Duration winnerDiff = Duration.between(winningTime, racerLastSplit);
                 String winnerDiffFormatted = String.format(SPLIT_TIME_FORMAT, winnerDiff.toMinutes(),

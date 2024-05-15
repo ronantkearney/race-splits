@@ -6,14 +6,12 @@ public class RacerDetails {
     String firstName;
     String lastName;
     String club;
-    boolean isJunior;
 
-    public RacerDetails(String bib, String firstName, String lastName, String club, boolean isJunior) {
+    public RacerDetails(String bib, String firstName, String lastName, String club) {
         this.bib = bib;
         this.firstName = firstName;
         this.lastName = lastName;
         this.club = club;
-        this.isJunior = isJunior;
     }
 
     public String getBib() {
@@ -46,13 +44,5 @@ public class RacerDetails {
 
     public void setClub(String club) {
         this.club = club;
-    }
-
-    public boolean isJunior() {
-        return isJunior;
-    }
-
-    public void setJunior(boolean junior) {
-        isJunior = junior;
     }
 }
